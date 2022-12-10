@@ -16,6 +16,8 @@ import (
 
 var start = flag.Int64("start", 0, "start timestamp")
 var end = flag.Int64("end", time.Now().Unix(), "end timestamp")
+var debug = flag.Bool("debug", false, "print all timestamps processed")
+var chunks = flag.Int("chunks", runtime.NumCPU(), "how many parts to process at once")
 
 func main() {
 	flag.Parse()
@@ -25,9 +27,8 @@ func main() {
 	endRange := *end
 	span := endRange - beginRange
 
-	cores := runtime.NumCPU()
-	chunkSize := int64(float64(span) / float64(cores))
-	log.Printf("Dividing %d (%d–%d) timestamps into %d chunks of size %d", span, beginRange, endRange, cores, chunkSize)
+	chunkSize := int64(float64(span) / float64(*chunks))
+	log.Printf("Dividing %d (%d–%d) timestamps into %d chunks of size %d", span, beginRange, endRange, *chunks, chunkSize)
 
 	if profile, _ := os.LookupEnv("PROFILE"); profile != "" {
 		filename := fmt.Sprintf("profile_%d-%d.pprof", beginRange, endRange)
@@ -43,7 +44,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	count := atomic.Int64{}
 
-	for i := 0; i < cores; i += 1 {
+	for i := 0; i < *chunks; i += 1 {
 		wg.Add(1)
 		start := beginRange + (int64(i) * chunkSize)
 		end := start + chunkSize - 1
@@ -83,7 +84,9 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 		}
 
 		// No alphabetical characters encountered
-		//fmt.Printf("%s %d\n", hex, timestamp)
+		if *debug {
+			fmt.Printf("%s\t%d\t%08b\n", hex, timestamp, timestamp)
+		}
 		numericalCount += 1
 		passes += 1
 		timestamp += 1
