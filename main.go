@@ -63,8 +63,11 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 	numericalCount := 0
 	passes := 0
 
-	var b [4]byte
+	var bytes [4]byte
+	var letterDetected bool
+	encoded := make([]byte, 2)
 	for {
+		letterDetected = false
 		if timestamp >= uint32(end) {
 			log.Printf("Goroutine %d reached the end (%d). Found numerical hexes in %d/%d (%f) passes.", id, timestamp, numericalCount, passes, float64(numericalCount)/float64(passes))
 			count.Add(int64(numericalCount))
@@ -72,22 +75,27 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 			return
 		}
 
-		binary.BigEndian.PutUint32(b[0:4], timestamp)
-		encoded := make([]byte, 8)
-		hex.Encode(encoded, b[:])
+		binary.BigEndian.PutUint32(bytes[0:4], timestamp)
 
-		if containsLetter(encoded) {
-			// Found an alphabetical character, skip this ID altogether
-			passes += 1
-			timestamp += 1
-			continue
+		for i := range bytes {
+			hex.Encode(encoded, bytes[i:i+1])
+			if containsLetter(encoded) {
+				// Found an alphabetical character, move on
+				letterDetected = true
+				break
+			}
 		}
 
 		// No alphabetical characters encountered
 		if *debug {
+			encoded := make([]byte, 4)
+			hex.Encode(encoded, bytes[:])
 			fmt.Printf("%s\t%d\t%08b\n", string(encoded), timestamp, timestamp)
 		}
-		numericalCount += 1
+
+		if !letterDetected {
+			numericalCount += 1
+		}
 		passes += 1
 		timestamp += 1
 	}
