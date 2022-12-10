@@ -73,10 +73,10 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 		}
 
 		binary.BigEndian.PutUint32(b[0:4], timestamp)
-		// TODO: Reduce allocations by replacing EncodeToString with Encode
-		hex := hex.EncodeToString(b[:])
+		encoded := make([]byte, 8)
+		hex.Encode(encoded, b[:])
 
-		if containsLetter([]byte(hex)) {
+		if containsLetter(encoded) {
 			// Found an alphabetical character, skip this ID altogether
 			passes += 1
 			timestamp += 1
@@ -85,7 +85,7 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 
 		// No alphabetical characters encountered
 		if *debug {
-			fmt.Printf("%s\t%d\t%08b\n", hex, timestamp, timestamp)
+			fmt.Printf("%s\t%d\t%08b\n", string(encoded), timestamp, timestamp)
 		}
 		numericalCount += 1
 		passes += 1
