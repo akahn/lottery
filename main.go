@@ -79,7 +79,7 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 
 		for i := range bytes {
 			hex.Encode(encoded, bytes[i:i+1])
-			if containsLetter(encoded) {
+			if isLetter(encoded[0]) || isLetter(encoded[1]) {
 				// Found an alphabetical character, move on
 				letterDetected = true
 				break
@@ -101,12 +101,6 @@ func scanRange(id int, start int64, end int64, count *atomic.Int64, wg *sync.Wai
 	}
 }
 
-func containsLetter(id []byte) bool {
-	for _, ch := range id {
-		if ch >= 97 && ch <= 122 {
-			return true
-		}
-	}
-
-	return false
+func isLetter(ch byte) bool {
+	return ch >= 97 && ch <= 122
 }
